@@ -1,0 +1,44 @@
+# Base44 development environment for the Casa Olive 3D visual tour.
+#
+# The entire site is one static file (casa-olive-3d/index.html). It has no build
+# step, no backend and no database: three.js and the Google Fonts are loaded from
+# public CDNs at runtime, and the GitHub Pages workflow deploys the
+# casa-olive-3d/ directory as the site root.
+#
+# So the only thing needed to see the project in the preview is a static dev
+# server with live reload, serving casa-olive-3d/ on host port 3000. No secrets
+# or external credentials are required.
+
+name: casa-olive-3d
+
+services:
+  # Static dev server with live reload (live reload only; the HTML is served
+  # untouched apart from the injected reload client so the CDN import map keeps
+  # working).
+  web:
+    image: node:22
+    working_dir: /app
+    command:
+      - sh
+      - -ec
+      - exec npx --yes live-server@1.2.2 casa-olive-3d --host=0.0.0.0 --port=3000 --no-browser --wait=150
+    ports:
+      - "3000:3000"
+    volumes:
+      # Live source from the sandbox; npm cache kept off the repo on a volume.
+      - .:/app
+      - npm-cache:/root/.npm
+    restart: on-failure
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok&&(r.headers.get('content-type')||'').includes('text/html')?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+volumes:
+  npm-cache:
